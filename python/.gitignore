@@ -1,0 +1,25 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*-credentials.json
+
+# Deploy scripts (kept locally, untracked for open source)
+deploy.sh
+cloudbuild.yaml
+
+# Python
+*.local
+venv
+__pycache__
+__pycache__/*
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+*.pywz
+*.pyzw
+
+# macOS
+.DS_Store

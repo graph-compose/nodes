@@ -1,0 +1,44 @@
+substitutions:
+  _SERVICE_NAME: 'python-services'
+  _REGION: 'us-central1'
+  _TAG: 'latest'
+  _PROJECT_ID: 'your-gcp-project-id'
+  _STORAGE_BUCKET_SECRET: 'STORAGE_BUCKET'
+  _GOOGLE_CLOUD_PROJECT_SECRET: 'GOOGLE_CLOUD_PROJECT'
+
+steps:
+  # Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_TAG}',
+      '-t', 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:latest',
+      '-f', 'cloud-run/graph-compose-nodes/python/Dockerfile',
+      'cloud-run/graph-compose-nodes/python'
+    ]
+
+  # Push the Docker image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_TAG}']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:latest']
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: [
+      'run', 'deploy', '${_SERVICE_NAME}',
+      '--image', 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_TAG}',
+      '--region', '${_REGION}',
+      '--platform', 'managed',
+      '--allow-unauthenticated',
+      '--memory', '2Gi',
+      '--cpu', '1',
+      '--max-instances', '10',
+      '--port', '8080',
+      '--set-secrets', 'STORAGE_BUCKET=${_STORAGE_BUCKET_SECRET}:latest,GOOGLE_CLOUD_PROJECT=${_GOOGLE_CLOUD_PROJECT_SECRET}:latest'
+    ]
+
+images:
+  - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_TAG}'
+  - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:latest'

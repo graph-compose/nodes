@@ -1,0 +1,42 @@
+substitutions:
+  _SERVICE_NAME: 'nodes-service'
+  _REGION: 'us-central1'
+  _TAG: 'latest'
+  _PROJECT_ID: 'your-gcp-project-id'
+
+steps:
+  # Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_TAG}',
+      '-t', 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:latest',
+      '-f', 'cloud-run/graph-compose-nodes/nodes/Dockerfile',
+      '.'
+    ]
+
+  # Push the Docker image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_TAG}']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:latest']
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: [
+      'run', 'deploy', '${_SERVICE_NAME}',
+      '--image', 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_TAG}',
+      '--region', '${_REGION}',
+      '--platform', 'managed',
+      '--allow-unauthenticated',
+      '--memory', '1Gi',
+      '--cpu', '1',
+      '--max-instances', '10',
+      '--port', '8080',
+      '--update-env-vars', 'GOOGLE_CLOUD_PROJECT=${_PROJECT_ID}'
+    ]
+
+images:
+  - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_TAG}'
+  - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:latest'

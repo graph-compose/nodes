@@ -1,0 +1,41 @@
+name: Recipe Request
+description: Suggest a new recipe or improvement to an existing one
+title: "[Recipe]: "
+labels: ["enhancement", "recipe"]
+body:
+  - type: dropdown
+    id: type
+    attributes:
+      label: Request type
+      options:
+        - New recipe idea
+        - Improvement to existing recipe
+        - New node/integration needed
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the recipe or improvement you'd like to see.
+      placeholder: "e.g., A recipe that monitors a GitHub repo for new issues and summarizes them in a weekly Slack digest"
+    validations:
+      required: true
+
+  - type: textarea
+    id: services
+    attributes:
+      label: Services involved
+      description: Which APIs or services would this recipe use?
+      placeholder: "e.g., GitHub API, OpenAI, Slack"
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Any other details, links, or examples.
+    validations:
+      required: false

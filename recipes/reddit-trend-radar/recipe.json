@@ -1,0 +1,152 @@
+{
+  "slug": "reddit-trend-radar",
+  "title": "SerpAPI Trend Radar Digest",
+  "description": "Pull web + Google News + Reddit-indexed results via SerpAPI, synthesize recurring signals with GPT-4o, and post a concise trend digest to Slack.",
+  "author": "Graph Compose Team",
+  "tags": ["serpapi", "google-search", "google-news", "reddit", "trends", "research", "openai", "slack"],
+  "difficulty": "intermediate",
+  "publishedAt": "2026-03-17",
+  "imageSrc": "/images/recipes/reddit-trend-radar-header.svg",
+  "imageAlt": "Workflow graph showing SerpAPI trend scanning and Slack digest delivery",
+  "requiredSecrets": [
+    "SERPAPI_API_KEY",
+    "OPENAI_API_KEY",
+    "SLACK_WEBHOOK_URL"
+  ],
+  "requiredServices": [
+    "Graph Compose Nodes Service",
+    "SerpAPI",
+    "OpenAI API",
+    "Slack Incoming Webhook"
+  ],
+  "relatedRecipes": ["slack-alert-pipeline", "ai-content-pipeline"],
+  "relatedBlogPosts": [],
+  "workflow": {
+    "workflowConfig": {
+      "workflowExecutionTimeout": "30 minutes"
+    },
+    "context": {
+      "topic": "ai coding agent",
+      "serpApiKey": "{{ secrets.SERPAPI_API_KEY }}",
+      "location": "Toronto,Ontario,Canada",
+      "gl": "ca",
+      "hl": "en",
+      "resultCount": 10,
+      "recency": "week",
+      "openaiApiKey": "{{ secrets.OPENAI_API_KEY }}",
+      "slackWebhookUrl": "{{ secrets.SLACK_WEBHOOK_URL }}"
+    },
+    "nodes": [
+      {
+        "id": "search_google_web",
+        "type": "http",
+        "dependencies": [],
+        "activityConfig": {
+          "startToCloseTimeout": "60s",
+          "retryPolicy": { "maximumAttempts": 2, "initialInterval": "5s" }
+        },
+        "http": {
+          "method": "POST",
+          "url": "http://localhost:3009/nodes/serpapi/search",
+          "body": {
+            "apiKey": "{{ context.serpApiKey }}",
+            "query": "{{ context.topic }}",
+            "engine": "google",
+            "location": "{{ context.location }}",
+            "gl": "{{ context.gl }}",
+            "hl": "{{ context.hl }}",
+            "num": "{{ context.resultCount }}",
+            "recency": "{{ context.recency }}"
+          }
+        }
+      },
+      {
+        "id": "search_google_news",
+        "type": "http",
+        "dependencies": [],
+        "activityConfig": {
+          "startToCloseTimeout": "60s",
+          "retryPolicy": { "maximumAttempts": 2, "initialInterval": "5s" }
+        },
+        "http": {
+          "method": "POST",
+          "url": "http://localhost:3009/nodes/serpapi/search",
+          "body": {
+            "apiKey": "{{ context.serpApiKey }}",
+            "query": "{{ context.topic }}",
+            "engine": "google",
+            "tbm": "nws",
+            "location": "{{ context.location }}",
+            "gl": "{{ context.gl }}",
+            "hl": "{{ context.hl }}",
+            "num": "{{ context.resultCount }}",
+            "recency": "{{ context.recency }}"
+          }
+        }
+      },
+      {
+        "id": "search_reddit_web_index",
+        "type": "http",
+        "dependencies": [],
+        "activityConfig": {
+          "startToCloseTimeout": "60s",
+          "retryPolicy": { "maximumAttempts": 2, "initialInterval": "5s" }
+        },
+        "http": {
+          "method": "POST",
+          "url": "http://localhost:3009/nodes/serpapi/search",
+          "body": {
+            "apiKey": "{{ context.serpApiKey }}",
+            "query": "{{ context.topic & ' site:reddit.com/r/' }}",
+            "engine": "google",
+            "location": "{{ context.location }}",
+            "gl": "{{ context.gl }}",
+            "hl": "{{ context.hl }}",
+            "num": "{{ context.resultCount }}",
+            "recency": "{{ context.recency }}"
+          }
+        }
+      },
+      {
+        "id": "summarize_trends",
+        "type": "http",
+        "dependencies": ["search_google_web", "search_google_news", "search_reddit_web_index"],
+        "activityConfig": {
+          "startToCloseTimeout": "2 minutes",
+          "retryPolicy": { "maximumAttempts": 2, "initialInterval": "10s" }
+        },
+        "http": {
+          "method": "POST",
+          "url": "http://localhost:3009/nodes/llm/query",
+          "body": {
+            "model": "openai/gpt-4o",
+            "api_key": "{{ context.openaiApiKey }}",
+            "system_prompt": "You are a market research analyst. Return concise markdown with these sections: Top Signals, Pain Points, Opportunity Angles, and 3 Content Ideas. Use bullets and keep it skimmable.",
+            "message": "{{ 'Topic: ' & context.topic & '\\n\\nGoogle web results:\\n' & $string(results.search_google_web.data.data) & '\\n\\nGoogle News results:\\n' & $string(results.search_google_news.data.data) & '\\n\\nReddit-indexed web results:\\n' & $string(results.search_reddit_web_index.data.data) }}",
+            "temperature": 0.3,
+            "max_tokens": 1200
+          }
+        }
+      },
+      {
+        "id": "post_digest_to_slack",
+        "type": "http",
+        "dependencies": ["summarize_trends"],
+        "activityConfig": {
+          "startToCloseTimeout": "30s",
+          "retryPolicy": { "maximumAttempts": 3, "initialInterval": "5s" }
+        },
+        "http": {
+          "method": "POST",
+          "url": "{{ context.slackWebhookUrl }}",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "text": "{{ '*SerpAPI Trend Radar*\\nTopic: ' & context.topic & '\\nRecency: ' & context.recency & '\\nGeo: ' & context.gl & ' / ' & context.location & '\\n\\n' & results.summarize_trends.data.data.response }}"
+          }
+        }
+      }
+    ]
+  }
+}

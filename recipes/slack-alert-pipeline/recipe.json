@@ -1,0 +1,83 @@
+{
+  "slug": "slack-alert-pipeline",
+  "title": "API Health Check with Slack Alerts",
+  "description": "Monitor an API endpoint's health, evaluate the response against custom rules, and send a formatted Slack alert when something is wrong.",
+  "author": "Graph Compose Team",
+  "tags": ["monitoring", "slack", "alerting", "health-check"],
+  "difficulty": "beginner",
+  "publishedAt": "2026-03-15",
+  "imageSrc": "/images/recipes/slack-alert-pipeline-header.svg",
+  "imageAlt": "Workflow graph showing API health monitoring with Slack notifications",
+  "requiredSecrets": ["SLACK_WEBHOOK_URL"],
+  "requiredServices": ["Your API endpoint", "Slack Incoming Webhook"],
+  "relatedRecipes": ["audio-dubbing-pipeline"],
+  "relatedBlogPosts": [],
+  "workflow": {
+    "context": {
+      "healthCheckUrl": "https://api.example.com/health",
+      "slackWebhookUrl": "{{ secrets.SLACK_WEBHOOK_URL }}",
+      "expectedStatusCode": 200
+    },
+    "nodes": [
+      {
+        "id": "check_endpoint",
+        "type": "http",
+        "dependencies": [],
+        "activityConfig": {
+          "startToCloseTimeout": "30s",
+          "retryPolicy": { "maximumAttempts": 3, "initialInterval": "5s" }
+        },
+        "http": {
+          "method": "GET",
+          "url": "{{ context.healthCheckUrl }}"
+        }
+      },
+      {
+        "id": "send_slack_alert",
+        "type": "http",
+        "dependencies": ["check_endpoint"],
+        "conditions": {
+          "match": "any",
+          "rules": [
+            {
+              "field": "{{ results.check_endpoint.statusCode }}",
+              "operator": "neq",
+              "value": "{{ context.expectedStatusCode }}"
+            }
+          ]
+        },
+        "http": {
+          "method": "POST",
+          "url": "{{ context.slackWebhookUrl }}",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "⚠️ Health Check Failed"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Endpoint:*\n{{ context.healthCheckUrl }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Status Code:*\n{{ results.check_endpoint.statusCode }}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

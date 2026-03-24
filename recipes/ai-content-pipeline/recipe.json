@@ -1,0 +1,113 @@
+{
+  "slug": "ai-content-pipeline",
+  "title": "AI Content Generation Pipeline",
+  "description": "Generate a blog post with GPT-4o, extract SEO metadata, and publish it to your CMS, all in one durable workflow with validation at each step.",
+  "author": "Graph Compose Team",
+  "tags": ["ai", "openai", "content", "cms", "seo"],
+  "difficulty": "intermediate",
+  "publishedAt": "2026-03-15",
+  "imageSrc": "/images/recipes/ai-content-pipeline-header.svg",
+  "imageAlt": "Workflow graph showing AI content generation with CMS publishing",
+  "requiredSecrets": ["OPENAI_API_KEY", "CMS_API_KEY"],
+  "requiredServices": ["OpenAI API", "Your CMS API"],
+  "relatedRecipes": ["audio-dubbing-pipeline"],
+  "relatedBlogPosts": [],
+  "workflow": {
+    "context": {
+      "openaiApiKey": "{{ secrets.OPENAI_API_KEY }}",
+      "cmsApiKey": "{{ secrets.CMS_API_KEY }}",
+      "cmsBaseUrl": "https://api.your-cms.com",
+      "topic": "How to implement retry logic in distributed systems",
+      "targetAudience": "Backend engineers",
+      "wordCount": 1500
+    },
+    "nodes": [
+      {
+        "id": "generate_content",
+        "type": "http",
+        "dependencies": [],
+        "activityConfig": {
+          "startToCloseTimeout": "2 minutes",
+          "retryPolicy": { "maximumAttempts": 2, "initialInterval": "10s" }
+        },
+        "http": {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer {{ context.openaiApiKey }}",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "gpt-4o",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are a technical writer. Write clear, practical content for the specified audience. Use code examples where appropriate. Output markdown."
+              },
+              {
+                "role": "user",
+                "content": "{{ 'Write a ' & $string(context.wordCount) & '-word blog post about: ' & context.topic & '. Target audience: ' & context.targetAudience }}"
+              }
+            ],
+            "temperature": 0.7,
+            "max_tokens": 4000
+          }
+        }
+      },
+      {
+        "id": "extract_seo_metadata",
+        "type": "http",
+        "dependencies": ["generate_content"],
+        "activityConfig": {
+          "startToCloseTimeout": "30s"
+        },
+        "http": {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/chat/completions",
+          "headers": {
+            "Authorization": "Bearer {{ context.openaiApiKey }}",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "gpt-4o",
+            "messages": [
+              {
+                "role": "system",
+                "content": "Extract SEO metadata from the provided blog post. Return a JSON object with: title, slug, metaDescription (max 160 chars), tags (array of 3-5 keywords). Return only valid JSON, no markdown."
+              },
+              {
+                "role": "user",
+                "content": "{{ results.generate_content.data.choices[0].message.content }}"
+              }
+            ],
+            "temperature": 0.2,
+            "max_tokens": 500,
+            "response_format": { "type": "json_object" }
+          }
+        }
+      },
+      {
+        "id": "publish_to_cms",
+        "type": "http",
+        "dependencies": ["generate_content", "extract_seo_metadata"],
+        "activityConfig": {
+          "startToCloseTimeout": "30s",
+          "retryPolicy": { "maximumAttempts": 3, "initialInterval": "5s" }
+        },
+        "http": {
+          "method": "POST",
+          "url": "{{ context.cmsBaseUrl & '/api/posts' }}",
+          "headers": {
+            "Authorization": "Bearer {{ context.cmsApiKey }}",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "content": "{{ results.generate_content.data.choices[0].message.content }}",
+            "metadata": "{{ $parseJSON(results.extract_seo_metadata.data.choices[0].message.content) }}",
+            "status": "draft"
+          }
+        }
+      }
+    ]
+  }
+}

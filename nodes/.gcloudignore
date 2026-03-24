@@ -1,0 +1,13 @@
+# Extend root .gcloudignore with cloud-run specific exclusions
+
+# Exclude workers directory (not needed for cloud-run services)
+workers/
+
+# Exclude other cloud-run services
+cloud-run/agent-demo/
+cloud-run/api-service/
+cloud-run/cron/
+cloud-run/io-nodes/
+cloud-run/temporal-ui/
+cloud-run/test-nodes/
+cloud-run/webhook/
