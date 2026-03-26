@@ -6,21 +6,21 @@ It runs five steps: three parallel SerpAPI searches, one LLM summarization pass,
 
 ## Node breakdown
 
-### `search_google_web`: [serpapi/search](../../src/nodes/routes/serpapi)
+### `search_google_web`: [serpapi/search](https://github.com/graph-compose/nodes/tree/main/nodes/src/nodes/routes/serpapi)
 
 Searches Google web for `context.topic` using location/language settings and a recency window.
 
-### `search_google_news`: [serpapi/search](../../src/nodes/routes/serpapi)
+### `search_google_news`: [serpapi/search](https://github.com/graph-compose/nodes/tree/main/nodes/src/nodes/routes/serpapi)
 
 Searches Google News (`tbm=nws`) for the same topic and recency period so you capture fresh media/editorial angles.
 
-### `search_reddit_web_index`: [serpapi/search](../../src/nodes/routes/serpapi)
+### `search_reddit_web_index`: [serpapi/search](https://github.com/graph-compose/nodes/tree/main/nodes/src/nodes/routes/serpapi)
 
 Searches Google for Reddit-indexed discussions using a site query (`site:reddit.com/r/`) so you still get community signal without depending on native Reddit API ranking.
 
 All three search nodes run in parallel, which keeps the workflow fast while still giving a broad signal surface.
 
-### `summarize_trends`: [llm/query](../../src/nodes/routes/llm)
+### `summarize_trends`: [llm/query](https://github.com/graph-compose/nodes/tree/main/python/src/routes/llm)
 
 Combines all three result sets and prompts GPT-4o to produce a concise markdown brief with:
 

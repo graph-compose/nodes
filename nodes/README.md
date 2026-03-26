@@ -8,7 +8,18 @@ You can see these integrations in action through the [Graph Compose Recipes](htt
 
 ## Architecture
 
-The service is organized as an Express app with route modules per provider. Each module follows a standard structure:
+This is one of two services in the repository. Both auto-generate OpenAPI specs and both are discovered by the Graph Compose platform through the same mechanism:
+
+| Service | Stack | Location | OpenAPI |
+|---|---|---|---|
+| **Nodes** (this directory) | Express.js / TypeScript / Zod | `nodes/` | `/openapi.json` |
+| **Python** | FastAPI / Pydantic / LiteLLM | [`../python/`](../python/) | `/openapi.json` |
+
+The platform performs **multi-service discovery** — it fetches `/openapi.json` from both services and merges the results into a unified node catalog. Contributors can add integrations in whichever stack makes sense for the provider.
+
+### Nodes service structure
+
+Each route module follows a standard structure:
 
 ```
 src/nodes/routes/<provider>/
@@ -20,7 +31,22 @@ src/nodes/routes/<provider>/
 
 OpenAPI specs are auto-generated per route module and merged into a single spec served at `/openapi.json`.
 
+### Python service structure
+
+The Python service follows the same pattern with FastAPI and Pydantic:
+
+```
+../python/src/routes/<provider>/
+  api/               # Route handlers
+  models/            # Pydantic request/response models
+  services/          # Business logic and API calls
+```
+
+Currently includes LLM completions (multi-provider via [LiteLLM](https://github.com/BerriAI/litellm)) and media downloads (via [yt-dlp](https://github.com/yt-dlp/yt-dlp)). See the [Python service README](../python/README.md) for details.
+
 ## Integrations
+
+### Nodes service (TypeScript)
 
 | Category | Providers |
 |---|---|
@@ -35,6 +61,13 @@ OpenAPI specs are auto-generated per route module and merged into a single spec 
 | Document | LlamaParse |
 | Storage | Google Cloud Storage (signed URLs) |
 | Data | Sources, Destinations (workflow runtime primitives) |
+
+### Python service
+
+| Category | Providers |
+|---|---|
+| AI / LLM | LiteLLM (OpenAI, Anthropic, Cohere, and 100+ providers) |
+| Media Downloads | yt-dlp (YouTube, TikTok, Instagram, Twitter/X, SoundCloud, Vimeo) |
 
 ## Prerequisites
 
@@ -95,14 +128,67 @@ The [`../recipes/`](../recipes/) directory contains pre-built workflow templates
 | [Reddit Trend Radar](../recipes/reddit-trend-radar/) | Intermediate | Scan web, news, and Reddit via SerpAPI, synthesize trends with GPT-4o, and post a digest to Slack |
 | [Slack Alert Pipeline](../recipes/slack-alert-pipeline/) | Beginner | Monitor an API endpoint and send formatted Slack alerts when something is wrong |
 
-Browse and import recipes from the [Graph Compose Recipes page](https://graphcompose.io/recipes), or see [CONTRIBUTING.md](CONTRIBUTING.md) for the recipe format guide.
+Recipes automatically appear on the [Graph Compose Recipes page](https://graphcompose.io/recipes) once merged — no database sync or manual registration required. Users can browse, search, filter by difficulty/tags, and import any recipe into the visual builder with one click via "Open in Builder."
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the recipe format guide, or [`../recipes/README.md`](../recipes/README.md) for the full specification.
+
+---
+
+## What Happens When You Contribute
+
+Everything in this repository propagates automatically through the Graph Compose platform. No frontend changes, no manual registration, no extra PRs.
+
+### New integration (either service)
+
+When you add a route module — under `src/nodes/routes/<provider>/` (TypeScript) or `../python/src/routes/<provider>/` (Python) — both services auto-generate their `/openapi.json`, and the platform merges them during discovery:
+
+| Surface | What happens |
+|---|---|
+| **[Nodes SDK Reference](https://www.graphcompose.io/nodes)** | The auto-generated OpenAPI spec is rendered as interactive API docs via Scalar |
+| **[Visual Builder](https://graphcompose.io/dashboard)** | The integration appears as a draggable, configurable node in the workflow builder |
+| **[AI Workflow Assistant](https://graphcompose.io/dashboard/assistant)** | The doc sync pipeline indexes the new operation into Supabase, so the AI can discover and configure it via semantic search |
+
+### New recipe
+
+When you add a recipe under `../recipes/<slug>/`:
+
+| Surface | What happens |
+|---|---|
+| **[Recipes page](https://graphcompose.io/recipes)** | The recipe appears in the browsable catalog with search, tag, and difficulty filtering |
+| **Recipe detail page** | `/recipes/<slug>` renders the metadata card, workflow preview, and article from `content.md` |
+| **Visual Builder** | "Open in Builder" imports the full workflow graph onto the canvas |
+
+---
+
+## LLM-Friendly Codebase
+
+This repository is designed to be easy for LLMs (Cursor, Copilot, Claude, etc.) to work with. Both the TypeScript and Python services follow rigid, repeatable structures, so an LLM can scaffold a complete new integration by referencing any existing one as a template.
+
+**Why it works well with AI code generation:**
+
+- **Uniform directory structure** — TypeScript providers follow `routes/<provider>/{ router.ts, controllers/, services/, schemas/ }`. Python providers follow `routes/<provider>/{ api/, models/, services/ }`. An LLM can copy any existing provider and adapt it.
+- **Schema-first design** — TypeScript uses Zod with `zod-openapi` extensions; Python uses Pydantic models. Both are declarative and pattern-matchable — LLMs excel at producing these from API documentation.
+- **Self-documenting** — The OpenAPI spec is generated from the schemas in both services, so there's no separate documentation to write or keep in sync. The code _is_ the documentation.
+- **Isolated modules** — Each provider is self-contained with no cross-provider dependencies. An LLM can generate a full integration without needing to understand the rest of the codebase.
+- **Comprehensive reference** — [`ROUTE_STANDARDS.md`](src/nodes/routes/ROUTE_STANDARDS.md) provides the full specification for TypeScript route modules, making it an ideal system prompt or context document for AI-assisted development.
+
+**Recommended workflow for AI-assisted contributions:**
+
+1. Pick the right service — TypeScript for most API integrations, Python for ML/LLM workloads or when a Python library is required
+2. Point your LLM at an existing provider (e.g., `src/nodes/routes/sendgrid/` or `../python/src/routes/llm/`) and the relevant standards doc
+3. Provide the target API's documentation (or URL for the LLM to reference)
+4. The LLM generates the full route module: router, handlers, service logic, and schemas
+5. Run the service and verify the new endpoints appear at `/openapi.json`
+
+---
 
 ## Contributing
 
-New integrations are automatically surfaced in the Graph Compose UI. When you add a route module with Zod schemas and an OpenAPI spec, the UI picks it up and renders it as a configurable node in the workflow builder -- no frontend changes needed.
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for step-by-step examples of adding integrations and recipes, or `src/nodes/routes/ROUTE_STANDARDS.md` for the full route module specification.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for step-by-step examples of adding integrations and recipes, or [`ROUTE_STANDARDS.md`](src/nodes/routes/ROUTE_STANDARDS.md) for the full route module specification.
 
 ## License
 
-Apache 2.0
+This project is dual-licensed:
+
+- **AGPL-3.0** for open-source use. See [LICENSE](../LICENSE) for details.
+- **Commercial License** available for organizations that need an alternative to AGPL. Contact the maintainers for details.

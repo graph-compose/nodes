@@ -72,16 +72,23 @@ Use this structure:
 6. `## Customizing`
 7. `## Required setup`
 
-When referencing node implementations, use markdown links so docs are clickable:
+When referencing node implementations, use GitHub links so docs are clickable from the public repository:
 
 ```md
-### `node_id`: [`provider/action`](../../src/nodes/routes/<provider>)
+### `node_id`: [`provider/action`](https://github.com/graph-compose/nodes/tree/main/nodes/src/nodes/routes/<provider>)
 ```
 
-Example:
+For Python-backed endpoints:
 
 ```md
-### summarize: [llm/query](../../src/nodes/routes/llm)
+### `node_id`: [`provider/action`](https://github.com/graph-compose/nodes/tree/main/python/src/routes/<provider>)
+```
+
+Examples:
+
+```md
+### search_web: [serpapi/search](https://github.com/graph-compose/nodes/tree/main/nodes/src/nodes/routes/serpapi)
+### summarize: [llm/query](https://github.com/graph-compose/nodes/tree/main/python/src/routes/llm)
 ```
 
 ## Validation Checklist (Before PR)

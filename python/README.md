@@ -147,4 +147,7 @@ This service handles LLM and media download capabilities for Graph Compose workf
 
 ## License
 
-Apache 2.0
+This project is dual-licensed:
+
+- **AGPL-3.0** for open-source use. See [LICENSE](../LICENSE) for details.
+- **Commercial License** available for organizations that need an alternative to AGPL. Contact the maintainers for details.

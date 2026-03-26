@@ -240,11 +240,12 @@ Rules:
 
 Structure: `# Title` > overview > `## Node breakdown` (one `###` per node) > `## Key patterns` > `## Customizing` > `## Required setup`.
 
-Link nodes to their source code using relative paths:
+Link nodes to their source code on GitHub:
 
 ```markdown
-### `search_web`: [serpapi/search](../../src/nodes/routes/serpapi)
-### `summarize`: [openai/chat](../../src/nodes/routes/openai)
+### `search_web`: [serpapi/search](https://github.com/graph-compose/nodes/tree/main/nodes/src/nodes/routes/serpapi)
+### `summarize`: [openai/chat](https://github.com/graph-compose/nodes/tree/main/nodes/src/nodes/routes/openai)
+### `translate`: [llm/query](https://github.com/graph-compose/nodes/tree/main/python/src/routes/llm)
 ```
 
 See existing recipes in `../recipes/` for complete examples.

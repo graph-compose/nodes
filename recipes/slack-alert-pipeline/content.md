@@ -4,13 +4,13 @@ Poll any HTTP endpoint, evaluate the response, and fire a formatted Slack alert 
 
 ## Node breakdown
 
-### `check_endpoint`
+### `check_endpoint`: HTTP GET (your API)
 
 Makes a `GET` request to your API's health check URL (set in `context.healthCheckUrl`). The node is configured to retry up to 3 times with a 5s interval before marking itself as failed, so transient blips don't trigger false alarms.
 
 The raw HTTP response is available to downstream nodes via `results.check_endpoint`. The status code specifically is at `results.check_endpoint.statusCode`, which the alert node's condition checks against `context.expectedStatusCode` (default: `200`).
 
-### `send_slack_alert`
+### `send_slack_alert`: [Slack Incoming Webhook](https://api.slack.com/messaging/webhooks)
 
 Posts a structured message to your Slack channel via an Incoming Webhook. Uses Slack's [Block Kit](https://api.slack.com/block-kit) format for a clean two-field layout showing the endpoint URL and the actual status code received.
 

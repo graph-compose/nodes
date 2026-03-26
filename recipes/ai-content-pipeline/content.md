@@ -4,15 +4,17 @@ Write a complete blog post, extract its SEO metadata, and publish it to your CMS
 
 ## Node breakdown
 
-### `generate_content`
+### `generate_content`: [OpenAI Chat Completions](https://platform.openai.com/docs/api-reference/chat)
 
-Calls the [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat) with a system prompt that instructs GPT-4o to write as a technical content writer, and a user message constructed from `context.topic`, `context.targetAudience`, and `context.wordCount`.
+Calls the OpenAI Chat Completions API with a system prompt that instructs GPT-4o to write as a technical content writer, and a user message constructed from `context.topic`, `context.targetAudience`, and `context.wordCount`.
 
 The full markdown post comes back at `results.generate_content.data.choices[0].message.content`, a standard OpenAI response path. This value is passed downstream to both `extract_seo_metadata` and `publish_to_cms`.
 
 Configured with a 2-minute timeout and 2 retry attempts. Temperature is set to `0.7` for creative variation in content while keeping the structure consistent.
 
-### `extract_seo_metadata`
+> **Note:** This recipe calls the OpenAI API directly via HTTP. You could also use the [llm/query](https://github.com/graph-compose/nodes/tree/main/python/src/routes/llm) node from the Python service, which wraps 100+ LLM providers via LiteLLM.
+
+### `extract_seo_metadata`: [OpenAI Chat Completions](https://platform.openai.com/docs/api-reference/chat)
 
 Feeds the generated post back into GPT-4o with a tighter system prompt: extract a `title`, `slug`, `metaDescription` (max 160 characters), and `tags` array from the content, and return them as valid JSON.
 
@@ -20,7 +22,7 @@ Using `"response_format": { "type": "json_object" }` guarantees the response is 
 
 This node has a 30s timeout with no retries, if GPT-4o is returning malformed JSON, a retry is unlikely to help.
 
-### `publish_to_cms`
+### `publish_to_cms`: HTTP POST (your CMS)
 
 Posts both the content and the SEO metadata to your CMS API as a draft. This node lists **two dependencies**, `generate_content` and `extract_seo_metadata`, so it waits for both to complete before executing.
 
